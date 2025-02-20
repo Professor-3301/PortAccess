@@ -44,9 +44,11 @@ class PentesterProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="pentester_profile")
     aadhar_or_ssn = models.CharField(max_length=50, null=True, blank=True)  # Aadhar (India) or SSN (Other regions)
     contact_no = models.CharField(max_length=15, null=True, blank=True)  # Contact number
+    experience = models.IntegerField(null=True, blank=True)  # Years of experience
+    certifications = models.TextField(null=True, blank=True)  # Certifications list (comma-separated)
 
     def __str__(self):
-        return f"Pentester Profile - {self.user.username}"
+        return f"Pentester Profile - {self.user.username} | Experience: {self.experience} years"
 
 
 class UserToken(models.Model):
@@ -55,3 +57,21 @@ class UserToken(models.Model):
 
     def __str__(self):
         return f"Token for {self.user.username}"
+
+class Server(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_servers')
+    name = models.CharField(max_length=255)
+    ip_address = models.GenericIPAddressField()
+    domain = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.ip_address})"
+
+class AccessRequest(models.Model):
+    pentester = models.ForeignKey(User, on_delete=models.CASCADE, related_name='pentester_requests')
+    server = models.ForeignKey(Server, on_delete=models.CASCADE, related_name='server_requests')
+    status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected')], default='pending')
+    requested_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Request from {self.pentester.username} to {self.server.name} - {self.status}"
