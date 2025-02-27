@@ -70,8 +70,12 @@ class Server(models.Model):
 class AccessRequest(models.Model):
     pentester = models.ForeignKey(User, on_delete=models.CASCADE, related_name='pentester_requests')
     server = models.ForeignKey(Server, on_delete=models.CASCADE, related_name='server_requests')
+    pentester_ip = models.GenericIPAddressField(null=True, blank=True) 
     status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected')], default='pending')
     requested_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('pentester', 'server')
 
     def __str__(self):
         return f"Request from {self.pentester.username} to {self.server.name} - {self.status}"
