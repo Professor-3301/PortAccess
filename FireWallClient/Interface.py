@@ -1,33 +1,47 @@
 import os
 import json
 import requests
-from auth import load_token, save_token, login
+import typer
+import time
+from rich.console import Console
+from rich.table import Table
+from rich.prompt import Prompt
+from auth import load_token, login, signup
 
-# API Endpoint (adjust based on your actual server URL)
+# ✅ API Endpoint
 BASE_URL = "http://127.0.0.1:333/api/"
-TOKEN_FILE = "auth_token.json"  # Location of saved token
 
-def check_auth_token():
-    """Check if a valid auth token exists."""
+console = Console()
+app = typer.Typer()
+
+def check_auth():
+    """Ensure authentication before proceeding."""
     token = load_token()
     if not token:
-        print("[⚠️] No valid auth token found. Please log in first.")
-        return False
-    print("[✅] Token found.")
-    return True
+        console.print("[⚠️] No valid auth token found. Please log in or sign up.", style="bold red")
+        action = Prompt.ask("Do you want to (1) Login or (2) Signup?", choices=["1", "2"])
+        if action == "1":
+            login()
+        elif action == "2":
+            signup()
+        else:
+            console.print("[❌] Invalid choice. Exiting...", style="bold red")
+            raise typer.Exit()
 
 def get_auth_headers():
-    """Return headers with stored JWT token."""
+    """Return headers with JWT token if authenticated."""
     token = load_token()
     if token:
         return {"Authorization": f"Bearer {token['token']}"}
-    print("[⚠️] Not authenticated. Please login.")
-    return None
+    else:
+        console.print("[⚠️] Not authenticated. Please login.", style="bold yellow")
+        return None
 
 def view_access_requests():
     """View access requests submitted by pentesters."""
-    print("\n[📄] Viewing Access Requests:")
-    server_id = input("Enter Server ID: ")
+    check_auth()
+    console.print("\n[📄] Viewing Access Requests:", style="bold cyan")
+    server_id = Prompt.ask("Enter Server ID")
 
     headers = get_auth_headers()
     if not headers:
@@ -38,29 +52,39 @@ def view_access_requests():
     if response.status_code == 200:
         requests_data = response.json()
         if not requests_data:
-            print("[ℹ️] No pending access requests.")
+            console.print("[ℹ️] No pending access requests.", style="bold yellow")
             return
+
+        table = Table(title="Access Requests", style="bold magenta")
+        table.add_column("Request ID", style="cyan")
+        table.add_column("Pentester", style="blue")
+        table.add_column("Aadhar/SSN", style="green")
+        table.add_column("Certifications", style="yellow")
+        table.add_column("Status", style="bold red")
+        table.add_column("Requested At", style="white")
 
         for request in requests_data:
             pentester = request['pentester']
-            print(f"\n[🆔] Request ID: {request['request_id']}")
-            print(f"🔹 Pentester Username: {pentester['username']}")
-            print(f"🆔 Aadhar Number: {pentester['aadhar_or_ssn']}")
-            print(f"🎓 Certifications: {pentester.get('certifications', 'N/A')}")
-            print(f"📌 Status: {request['status']}")
-            print(f"📅 Requested At: {request['requested_at']}")
+            table.add_row(
+                str(request['request_id']),  # Convert to string
+                str(pentester['username']),
+                str(pentester['aadhar_or_ssn']),
+                str(pentester.get('certifications', 'N/A')),
+                str(request['status']),
+                str(request['requested_at'])  # Convert to string
+            )
+
+        console.print(table)
     else:
-        print(f"[❌] Failed to fetch access requests: {response.json()}")
+        console.print(f"[❌] Failed to fetch access requests: {response.json()}", style="bold red")
+
 
 def approve_or_reject_request():
     """Approve or reject an access request."""
-    server_id = input("Enter Server ID: ")
-    request_id = input("Enter Access Request ID: ")
-    action = input("Approve or Reject? (approve/reject): ").lower()
-
-    if action not in ["approve", "reject"]:
-        print("[❌] Invalid action. Please choose 'approve' or 'reject'.")
-        return
+    check_auth()
+    server_id = Prompt.ask("Enter Server ID")
+    request_id = Prompt.ask("Enter Access Request ID")
+    action = Prompt.ask("Approve or Reject?", choices=["approve", "reject"])
 
     headers = get_auth_headers()
     if not headers:
@@ -71,49 +95,74 @@ def approve_or_reject_request():
                               headers=headers)
 
     if response.status_code == 200:
-        print(f"[✅] Request {action}d successfully.")
+        console.print(f"[✅] Request {action}d successfully.", style="bold green")
     else:
-        print(f"[❌] Failed to update request: {response.json()}")
+        console.print(f"[❌] Failed to update request: {response.json()}", style="bold red")
+
+def change_password():
+    """Allow the server owner to change their password."""
+    check_auth()
+
+    old_password = Prompt.ask("[🔑] Enter Old Password", password=True)
+    new_password = Prompt.ask("[🔑] Enter New Password", password=True)
+
+    headers = get_auth_headers()
+    if not headers:
+        return
+
+    response = requests.post(  # Change PATCH to POST or PUT
+        f"{BASE_URL}server-owner/change-password/",
+        json={"old_password": old_password, "new_password": new_password},
+        headers=headers
+    )
+
+    try:
+        if response.status_code == 200:
+            console.print("[✅] Password updated successfully.", style="bold green")
+        else:
+            error_message = response.json() if response.text else "[❌] No response from server."
+            console.print(f"[❌] Failed to update password: {error_message}", style="bold red")
+    except requests.exceptions.JSONDecodeError:
+        console.print("[❌] Server returned an invalid response. Check if the API is running.", style="bold red")
+
+
 
 def logout():
-    """Clear the auth token and log out."""
-    if os.path.exists(TOKEN_FILE):
-        os.remove(TOKEN_FILE)
-        print("[✅] Logged out successfully.")
+    """Log out by removing the authentication token."""
+    if os.path.exists("auth_token.json"):
+        os.remove("auth_token.json")
+        console.print("[✅] Logged out successfully.", style="bold green")
     else:
-        print("[❌] No token found to log out.")
+        console.print("[❌] No token found to log out.", style="bold red")
 
-def perform_task():
-    """Perform tasks based on the server owner's role."""
-    print("\n[🔧] Server Owner Actions:")
-    print("1. View Access Requests")
-    print("2. Approve/Reject Access Request")
-    print("3. Logout")
-    print("4. Exit")
+def main_menu():
+    """Interactive main menu."""
+    check_auth()
 
-    choice = input("Select an option: ")
-
-    if choice == "1":
-        view_access_requests()
-    elif choice == "2":
-        approve_or_reject_request()
-    elif choice == "3":
-        logout()
-    elif choice == "4":
-        print("[👋] Exiting CLI. Goodbye!")
-        exit()
-    else:
-        print("[❌] Invalid choice. Please try again.")
-
-def main():
-    """Main function to drive the interactive CLI interface."""
-    if not check_auth_token():
-        login()
-
-    print("\n[🚀] Welcome to the PortAccess Server Owner Interface.")
-    
     while True:
-        perform_task()
+        console.print("\n[🔧] Server Owner Actions:", style="bold blue")
+        console.print("[1] View Access Requests", style="bold cyan")
+        console.print("[2] Approve/Reject Access Request", style="bold yellow")
+        console.print("[3] Change Password", style="bold green")
+        console.print("[4] Logout", style="bold red")
+        console.print("[5] Exit", style="bold white")
+
+        choice = Prompt.ask("Select an option", choices=["1", "2", "3", "4", "5"])
+
+        if choice == "1":
+            view_access_requests()
+        elif choice == "2":
+            approve_or_reject_request()
+        elif choice == "3":
+            change_password()
+        elif choice == "4":
+            logout()
+            break
+        elif choice == "5":
+            console.print("[👋] Exiting CLI. Goodbye!", style="bold magenta")
+            break
+        else:
+            console.print("[❌] Invalid choice. Please try again.", style="bold red")
 
 if __name__ == "__main__":
-    main()
+    main_menu()

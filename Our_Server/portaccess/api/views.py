@@ -435,3 +435,82 @@ class ServerOwnerAccessRequestView(APIView):
         access_request.save()
 
         return Response({"message": f"Request {action}d successfully."}, status=status.HTTP_200_OK)
+    
+
+class ChangeServerOwnerPasswordView(APIView):
+    """
+    Allows a server owner to change their password.
+    """
+
+    def post(self, request):
+        """ Server owner can change their password by providing the old one """
+        auth_header = request.headers.get("Authorization")
+
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return Response({"error": "Authentication token required."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        token = auth_header.split("Bearer ")[1]  # Extract actual token
+
+        # Verify token
+        try:
+            user_token = UserToken.objects.get(token=token)
+            user = user_token.user  # Extract authenticated user
+        except UserToken.DoesNotExist:
+            return Response({"error": "Invalid or expired token."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Get old and new passwords from request data
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+
+        # Validate old password
+        if not check_password(old_password, user.password):
+            return Response({"error": "Incorrect old password."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate new password length
+        if len(new_password) < 6:
+            return Response({"error": "New password must be at least 6 characters long."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update password
+        user.password = make_password(new_password)
+        user.save()
+
+        return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+
+class ChangePentesterPasswordView(APIView):
+    """
+    Allows a pentester to change their password.
+    """
+
+    def post(self, request):
+        """ Pentester can change their password by providing the old one """
+        auth_header = request.headers.get("Authorization")
+
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return Response({"error": "Authentication token required."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        token = auth_header.split("Bearer ")[1]  # Extract actual token
+
+        # Verify token
+        try:
+            user_token = UserToken.objects.get(token=token)
+            user = user_token.user  # Extract authenticated user
+        except UserToken.DoesNotExist:
+            return Response({"error": "Invalid or expired token."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Get old and new passwords from request data
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+
+        # Validate old password
+        if not check_password(old_password, user.password):
+            return Response({"error": "Incorrect old password."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate new password length
+        if len(new_password) < 6:
+            return Response({"error": "New password must be at least 6 characters long."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update password
+        user.password = make_password(new_password)
+        user.save()
+
+        return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
