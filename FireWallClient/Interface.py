@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.prompt import Prompt
 from auth import load_token, login, signup
+import subprocess
 
 # ✅ API Endpoint
 BASE_URL = "http://127.0.0.1:333/api/"
@@ -95,9 +96,24 @@ def approve_or_reject_request():
                               headers=headers)
 
     if response.status_code == 200:
+        data = response.json()
         console.print(f"[✅] Request {action}d successfully.", style="bold green")
+
+        if "pentester_ip" in data:
+            pentester_ip = data["pentester_ip"]
+            
+            if action == "approve":
+                add_ip(pentester_ip)  # Add IP if approved
+            else:
+                remove_ip(pentester_ip)  # Remove IP if rejected
+
+            # Run script to update whitelist
+            subprocess.run(["python3", "whitelist_ip.py"])  
+            console.print(f"[🔹] Whitelist updated successfully.", style="bold cyan")
+        
     else:
         console.print(f"[❌] Failed to update request: {response.json()}", style="bold red")
+
 
 def change_password():
     """Allow the server owner to change their password."""
@@ -125,7 +141,27 @@ def change_password():
     except requests.exceptions.JSONDecodeError:
         console.print("[❌] Server returned an invalid response. Check if the API is running.", style="bold red")
 
+def add_ip(ip):
+    """Add the approved IP to whitelist.txt."""
+    with open("whitelist.txt", "a") as file:
+        file.write(ip + "\n")
+    console.print(f"[🔹] IP {ip} added to whitelist.txt", style="bold blue")
 
+def remove_ip(ip):
+    """Remove the rejected IP from whitelist.txt."""
+    try:
+        with open("whitelist.txt", "r") as file:
+            lines = file.readlines()
+
+        with open("whitelist.txt", "w") as file:
+            for line in lines:
+                if line.strip() != ip:
+                    file.write(line)
+
+        console.print(f"[🔻] IP {ip} removed from whitelist.txt", style="bold red")
+
+    except FileNotFoundError:
+        console.print("[⚠] whitelist.txt not found. No changes made.", style="bold yellow")
 
 def logout():
     """Log out by removing the authentication token."""

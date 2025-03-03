@@ -5,7 +5,6 @@ from django.contrib.auth.hashers import make_password, check_password
 from rest_framework import status
 from .models import User, UserToken, ServerOwnerProfile, PentesterProfile, Server, AccessRequest 
 import uuid
-from rest_framework import status
 from rest_framework.authtoken.models import Token
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.permissions import AllowAny
@@ -345,12 +344,12 @@ class ServerAccessRequestView(APIView):
     
 
 class ServerOwnerAccessRequestView(APIView):
-    """ View for server owners to manage and verify pentester access requests """
+    """View for server owners to manage and verify pentester access requests"""
 
     permission_classes = [AllowAny]  # Requires authentication via token
 
     def get(self, request, server_id):
-        """ Server owner can view all access requests along with pentester details """
+        """Server owner can view all access requests along with pentester details"""
         auth_header = request.headers.get("Authorization")
 
         if not auth_header or not auth_header.startswith("Bearer "):
@@ -377,7 +376,7 @@ class ServerOwnerAccessRequestView(APIView):
         if not access_requests.exists():
             return Response({"message": "No access requests found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Serialize request data with pentester details
+        # Serialize request data with pentester details and IP
         request_list = []
         for req in access_requests:
             pentester_profile = PentesterProfile.objects.filter(user=req.pentester).first()
@@ -395,12 +394,13 @@ class ServerOwnerAccessRequestView(APIView):
                 "status": req.status,
                 "requested_at": req.requested_at.strftime("%Y-%m-%d %H:%M:%S"),
                 "pentester": pentester_data,
+                "pentester_ip": req.pentester_ip,  # Include pentester IP
             })
 
         return Response(request_list, status=status.HTTP_200_OK)
 
     def patch(self, request, server_id, request_id):
-        """ Server owner can approve or reject an access request """
+        """Server owner can approve or reject an access request"""
         auth_header = request.headers.get("Authorization")
 
         if not auth_header or not auth_header.startswith("Bearer "):
@@ -434,7 +434,10 @@ class ServerOwnerAccessRequestView(APIView):
         access_request.status = "approved" if action == "approve" else "rejected"
         access_request.save()
 
-        return Response({"message": f"Request {action}d successfully."}, status=status.HTTP_200_OK)
+        return Response({
+            "message": f"Request {action}d successfully.",
+            "pentester_ip": access_request.pentester_ip  # Include pentester IP in response
+        }, status=status.HTTP_200_OK)
     
 
 class ChangeServerOwnerPasswordView(APIView):
