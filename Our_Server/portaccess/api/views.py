@@ -517,3 +517,48 @@ class ChangePentesterPasswordView(APIView):
         user.save()
 
         return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+
+
+class ServerOwnerDetailsView(APIView):
+    """View to retrieve details of the currently logged-in server owner"""
+    permission_classes = [AllowAny]  # We manually handle authentication
+
+    def get(self, request):
+        # Extract the token from headers
+        token = request.headers.get("Authorization")
+
+        if not token:
+            return Response({"error": "Authentication token required."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Handle "Token <actual_token>" or "Bearer <actual_token>"
+        token_parts = token.split()
+        if len(token_parts) != 2 or token_parts[0] not in ["Token", "Bearer"]:
+            return Response({"error": "Invalid token format."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        actual_token = token_parts[1]  # Extract the real token
+
+        print(f"🔍 Received Token: {actual_token}")  # Debugging step
+
+        # Check if token exists in the database
+        user_token = UserToken.objects.filter(token=actual_token).first()
+        if not user_token:
+            return Response({"error": "Invalid or expired token."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user = user_token.user
+
+        # Ensure the user is a server owner
+        server_owner = ServerOwnerProfile.objects.filter(user=user).first()
+        if not server_owner:
+            return Response({"error": "Access denied. Only server owners can view their details."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Serialize the server owner's details
+        owner_data = {
+            "id": server_owner.id,
+            "username": server_owner.user.username,
+            "email": server_owner.user.email,
+            "ip": server_owner.ip,
+            "name": server_owner.name,
+            "domain": server_owner.domain
+        }
+
+        return Response(owner_data, status=status.HTTP_200_OK)

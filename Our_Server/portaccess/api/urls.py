@@ -11,4 +11,5 @@ urlpatterns = [
     path("server-owner/change-password/", ChangeServerOwnerPasswordView.as_view(), name="change_server_owner_password"),
     path("pentester/change-password/", ChangePentesterPasswordView.as_view(), name="change_pentester_password"),
     path('server/<int:server_id>/access-requests/<int:request_id>/', ServerOwnerAccessRequestView.as_view(), name='manage_access_request'),
+    path("server-owner/details/", ServerOwnerDetailsView.as_view(), name="server_owner_details"),
 ]
