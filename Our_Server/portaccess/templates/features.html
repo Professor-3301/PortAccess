@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Features - PortAccess{% endblock %}
+
+{% block content %}
+    <section class="features-intro">
+        <h1>Key Features of PortAccess</h1>
+        <p>
+            PortAccess provides a robust, token-based network access control system designed to enhance server security 
+            by controlling which users can access your non-web server ports. Our features aim to balance security 
+            and ease of use, ensuring only authorized users can interact with your system.
+        </p>
+    </section>
+
+    <!-- Detailed Features Section -->
+    <section class="features-details">
+        <h2>Our Features</h2>
+
+        <!-- Feature 1: Secure Port Access Control -->
+        <div class="feature-item">
+            <h3>🔒 Secure Port Access Control</h3>
+            <p>
+                By default, access to all non-web server ports (excluding ports 80 and 443) is denied. Only authorized 
+                pentesters, who have been issued access tokens, can gain access to these ports for security testing.
+            </p>
+        </div>
+
+        <!-- Feature 2: Token-Based Authorization -->
+        <div class="feature-item">
+            <h3>🔑 Token-Based Authorization</h3>
+            <p>
+                Our system issues unique, time-bound access tokens to pentesters. These tokens authorize specific 
+                pentesters to access the non-web ports, providing flexibility and accountability for server owners. 
+                Tokens can be generated, revoked, and customized for individual pentesters.
+            </p>
+        </div>
+
+        <!-- Feature 3: Dynamic Firewall Integration -->
+        <div class="feature-item">
+            <h3>🛡️ Dynamic Firewall Integration</h3>
+            <p>
+                PortAccess integrates with a client-side firewall application to dynamically allow access to only authorized 
+                IP addresses. The firewall updates in real-time based on the presence of valid tokens, ensuring that 
+                unauthorized users cannot access restricted ports.
+            </p>
+        </div>
+
+        <!-- Feature 4: Whitelisting of Pentester IPs -->
+        <div class="feature-item">
+            <h3>📋 Whitelisting of Pentester IPs</h3>
+            <p>
+                Pentester IP addresses are added to a whitelist upon token verification. This ensures that only validated 
+                pentesters with approved IP addresses can access the non-web ports during the authorized time window.
+            </p>
+        </div>
+
+        <!-- Feature 5: Easy Access Management -->
+        <div class="feature-item">
+            <h3>⚙️ Easy Access Management for Server Owners</h3>
+            <p>
+                Server owners can manage who has access to their ports using an intuitive interface. Owners can easily 
+                view a list of authorized pentesters, manage their tokens, and review access logs to monitor activity.
+            </p>
+        </div>
+
+        <!-- Feature 6: Detailed Logs and Reporting -->
+        <div class="feature-item">
+            <h3>📊 Detailed Logs and Reporting</h3>
+            <p>
+                Every access attempt to your server’s ports is logged, including the pentester’s details, IP address, 
+                and access time. These logs help server owners track who accessed their server and ensure that no 
+                unauthorized activity has occurred.
+            </p>
+        </div>
+    </section>
+{% endblock %}

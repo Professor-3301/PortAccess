@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Downloads - PortAccess{% endblock %}
+
+{% block content %}
+
+<section class="downloads-container">
+    <h1>Download PortAccess Applications</h1>
+    <p>Select the appropriate application for your role.</p>
+
+    <div class="download-items">
+        <div class="download-card">
+            <h3>Pentester Application</h3>
+            <p>For pentesters who need controlled access to target servers.</p>
+            <a href="{% static 'downloads/pentester.deb' %}" class="download-btn">Download (.deb)</a>
+        </div>
+
+        <div class="download-card">
+            <h3>Server Application</h3>
+            <p>For server owners who want to manage access securely.</p>
+            <a href="{% static 'downloads/server.deb' %}" class="download-btn">Download (.deb)</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
